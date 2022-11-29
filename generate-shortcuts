@@ -1,0 +1,109 @@
+#!/usr/bin/env bash
+# Usage
+#================================================================
+# HEADER
+#================================================================
+#% SYNOPSIS
+#+    ${SCRIPT_NAME} [-d applet storage destination]
+#%
+#% DESCRIPTION
+#%    Generate applets for every Apple Shortcut in your Shortcut library
+#%    By default, applets are stored in ~/.applets
+#%
+#% OPTIONS
+#%    -h, --help                    Print this help
+#%
+#% EXAMPLES
+#%    ${SCRIPT_NAME} 
+#%    ${SCRIPT_NAME} -d ~/.scriptlets
+#%
+#================================================================
+#- IMPLEMENTATION
+#-    version         ${SCRIPT_NAME}  0.0.1
+#-    author          Alex Teal
+#-    copyright       (none)
+#-    license         (none)
+#-    script_id       2
+#-
+#================================================================
+#  HISTORY
+#     2022/11/29 : alexteal : Script creation
+# 
+#================================================================
+#  DEBUG OPTION
+#    set -n  # Uncomment to check your syntax, without execution.
+#    set -x  # Uncomment to debug this shell script
+#
+#================================================================
+# END_OF_HEADER
+#================================================================
+  #== needed variables ==#
+SCRIPT_HEADSIZE=$(head -200 ${0} |grep -n "^# END_OF_HEADER" | cut -f1 -d:)
+SCRIPT_NAME="$(basename ${0})"
+
+  #== usage functions ==#
+usage() { printf "Usage: "; head -${SCRIPT_HEADSIZE:-99} ${0} | grep -e "^#+" | sed -e "s/^#+[ ]*//g" -e "s/\${SCRIPT_NAME}/${SCRIPT_NAME}/g" ; }
+usagefull() { head -${SCRIPT_HEADSIZE:-99} ${0} | grep -e "^#[%+-]" | sed -e "s/^#[%+-]//g" -e "s/\${SCRIPT_NAME}/${SCRIPT_NAME}/g" ; }
+scriptinfo() { head -${SCRIPT_HEADSIZE:-99} ${0} | grep -e "^#-" | sed -e "s/^#-//g" -e "s/\${SCRIPT_NAME}/${SCRIPT_NAME}/g"; }
+
+case $1 in
+    -h )
+        usagefull
+        exit 0
+        ;;
+    -d )
+        APPLETS="$2/"
+        eval "mkdir -p \"$APPLETS\""
+        shortcuts list > /tmp/shortcuts
+        while read i; do
+            echo "$i"
+            file=$(echo $i | sed -e 's/\ /\\\\ /g')
+            # create bash file
+            # echo "#!/bin/bash\nshortcuts run \"$i\"" > "$SCRIPTS$i"
+            # compile applescript, use tmp file because osacompile SUCKS
+            echo "do shell script \
+                \"/usr/bin/shortcuts \" & \" \
+                run \\\"$i\\\" \"" \
+                > /tmp/osascript_source
+                            eval "osacompile -o \"$APPLETS$i\".app < /tmp/osascript_source"
+
+                                done < /tmp/shortcuts
+
+        #link directory to applications
+        ln -s $APPLETS /Applications/ShortcutsApplets
+
+        #clean up
+
+        eval "rm /tmp/shortcuts"
+        eval "rm /tmp/osascript_source"
+        exit 0
+        ;;
+
+        *) 
+        APPLETS="$HOME/applets"
+        mkdir "$HOME/applets"
+        shortcuts list > /tmp/shortcuts
+        while read i; do
+            echo "$i"
+            file=$(echo $i | sed -e 's/\ /\\\\ /g')
+            # create bash file
+            # echo "#!/bin/bash\nshortcuts run \"$i\"" > "$SCRIPTS$i"
+            # compile applescript, use tmp file because osacompile SUCKS
+            echo "do shell script \
+                \"/usr/bin/shortcuts \" & \" \
+                run \\\"$i\\\" \"" \
+                > /tmp/osascript_source
+                            eval "osacompile -o \"$APPLETS$i\".app < /tmp/osascript_source"
+
+                                done < /tmp/shortcuts
+
+        #link directory to applications
+        ln -s $APPLETS /Applications/ShortcutsApplets
+
+        #clean up
+
+        eval "rm /tmp/shortcuts"
+        eval "rm /tmp/osascript_source"
+        exit 0
+        ;;
+esac
